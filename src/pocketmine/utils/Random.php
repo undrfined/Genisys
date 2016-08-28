@@ -21,13 +21,16 @@
 
 namespace pocketmine\utils;
 
+use php_random\XorShift128Engine;
 
 /**
- * Unsecure Random Number Noise, used for fast seeded values
+ * Random Number Noise, used for fast seeded values
  */
 class Random{
 
 	protected $seed;
+	
+	private $engine;
 
 	/**
 	 * @param int $seed Integer to be used as seed.
@@ -38,6 +41,8 @@ class Random{
 		}
 
 		$this->setSeed($seed);
+
+		$this->engine = XorShift128Engine::from($this->seed);
 	}
 
 	/**
@@ -66,13 +71,7 @@ class Random{
 	 * @return int
 	 */
 	public function nextSignedInt(){
-		$t = ((($this->seed * 65535) + 31337) >> 8) + 1337;
-		if(PHP_INT_SIZE === 8){
-			$t = $t << 32 >> 32;
-		}
-		$this->seed ^= $t;
-
-		return $t;
+		return $this->engine->next();
 	}
 
 	/**
