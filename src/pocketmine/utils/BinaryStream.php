@@ -1,21 +1,21 @@
 <?php
 /*
- *
- *  ____            _        _   __  __ _                  __  __ ____  
- * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \ 
- * | |_) / _ \ / __| |/ / _ \ __| |\/| | | '_ \ / _ \_____| |\/| | |_) |
- * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/ 
- * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_| 
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * @author PocketMine Team
- * @link http://www.pocketmine.net/
- * 
- *
+*
+*  ____            _        _   __  __ _                  __  __ ____  
+* |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \ 
+* | |_) / _ \ / __| |/ / _ \ __| |\/| | | '_ \ / _ \_____| |\/| | |_) |
+* |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/ 
+* |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_| 
+*
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* @author PocketMine Team
+* @link http://www.pocketmine.net/
+* 
+*
 */
 namespace pocketmine\utils;
 #include <rules/DataPacket.h>
@@ -160,6 +160,42 @@ class BinaryStream extends \stdClass{
 		$this->buffer .= chr($v);
 	}
 
+	public function getVarInt(){
+		$result = $shift = 0;
+		do {
+			$byte = $this->getByte();
+			$result |= ($byte & 0x7f) << $shift;
+			$shift += 7;
+		} while ($byte > 0x7f);
+		return $result;
+	}
+
+	public function putVarInt($v){
+		// Small values do not need to be encoded
+		if ($v < 0x80) {
+			$this->putByte($v);
+		} else {
+			$values = array();
+			while ($v > 0) {
+				$values[] = 0x80 | ($v & 0x7f);
+				$v = $v >> 7;
+			}
+			// Remove the MSB flag from the last byte
+			$values[count($values)-1] &= 0x7f;
+			$bytes = call_user_func_array('pack', array_merge(array('C*'), $values));;
+			$this->put($bytes);
+		}
+	}
+
+	public function getString(){
+		return $this->get($this->getVarInt());
+	}
+
+	public function putString($v){
+		$this->putVarInt(strlen($v));
+		$this->put($v);
+	}
+
 	public function getDataArray($len = 10){
 		$data = [];
 		for($i = 1; $i <= $len and !$this->feof(); ++$i){
@@ -191,11 +227,8 @@ class BinaryStream extends \stdClass{
 		}
 
 		$cnt = $this->getByte();
-
 		$data = $this->getShort();
-
 		$nbtLen = $this->getLShort();
-
 		$nbt = "";
 
 		if($nbtLen > 0){
@@ -221,16 +254,6 @@ class BinaryStream extends \stdClass{
 		$nbt = $item->getCompoundTag();
 		$this->putLShort(strlen($nbt));
 		$this->put($nbt);
-
-	}
-
-	public function getString(){
-		return $this->get($this->getShort());
-	}
-
-	public function putString($v){
-		$this->putShort(strlen($v));
-		$this->put($v);
 	}
 
 	public function feof(){

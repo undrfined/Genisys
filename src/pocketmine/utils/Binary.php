@@ -431,5 +431,4 @@ class Binary{
 	public static function writeLLong($value){
 		return strrev(self::writeLong($value));
 	}
-
 }
